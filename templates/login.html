@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | Learnova AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #9c6bff, #d1b3ff);
+            font-family: 'Poppins', sans-serif;
+        }
+        .login-box {
+            background: rgba(255, 255, 255, 0.25);
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 360px;
+            backdrop-filter: blur(12px);
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255,255,255,0.8);
+            font-size: 15px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: #7b4eff;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #6438d6;
+        }
+        a {
+            color: #fff;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>🔐 Learnova Login</h2>
+
+    <form method="POST">
+        <input type="text" name="username" placeholder="Enter username" required>
+        <input type="password" name="password" placeholder="Enter password" required>
+        <button type="submit">Login</button>
+    </form>
+
+    <p style="margin-top:15px;">
+        <a href="/register">Don't have an account? Register</a>
+    </p>
+</div>
+
+</body>
+</html>
