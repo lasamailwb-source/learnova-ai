@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📘 Learnova Reader View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(145deg, #c8a6ff, #d1b3ff);
+      font-family: "Poppins", sans-serif;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    .reader-container {
+      background: #fff;
+      margin: 2rem auto;
+      padding: 2rem;
+      border-radius: 20px;
+      max-width: 900px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    #readerContent {
+      text-align: left;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: #333;
+      overflow-y: auto;
+      max-height: 70vh;
+      padding-right: 10px;
+    }
+    .reader-controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      background: #7b4eff;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #6438d6;
+    }
+    footer {
+      margin-top: 30px;
+      font-size: 0.85rem;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <h1>📖 Learnova Reader View</h1>
+  <div class="reader-container">
+    <div id="readerContent">Loading your summary...</div>
+
+    <div class="reader-controls">
+      <button id="playBtn">▶ Play</button>
+      <button id="pauseBtn">⏸ Pause</button>
+      <button id="stopBtn">⏹ Stop</button>
+      <button id="printBtn">🖨 Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <footer>© 2025 Learnova AI Assistant | Reader Mode</footer>
+
+  <script src="{{ url_for('static', filename='readerView.js') }}"></script>
+</body>
+</html>
