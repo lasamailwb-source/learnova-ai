@@ -1,6 +1,5 @@
-// 🎯 Learnova AI Assistant - Clean Simplified Version (no speed, progress, or export PDF on main page)
-
 document.addEventListener("DOMContentLoaded", () => {
+
   const textInput = document.getElementById("textInput");
   const fileInput = document.getElementById("fileInput");
   const summarizeBtn = document.getElementById("summarizeBtn");
@@ -11,14 +10,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const speakBtn = document.getElementById("speakBtn");
   const stopBtn = document.getElementById("stopBtn");
   const readerViewBtn = document.getElementById("readerViewBtn");
+  const micBtn = document.getElementById("micBtn");
 
   let currentText = "";
   let currentUtterance = null;
-  let isPaused = false;
 
-  // ---------- Summarize ----------
+  // ----------- Summarize ----------
   summarizeBtn.addEventListener("click", async (e) => {
     e.preventDefault();
+
     const text = textInput.value.trim();
     const file = fileInput.files[0];
 
@@ -42,94 +42,102 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to summarize.");
+      if (!res.ok) throw new Error(data.error);
 
-      summaryOutput.innerHTML = data.summary
-        .replace(/\n/g, "<br>")
-        .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
-
-      if (Array.isArray(data.keywords)) {
-        keywordsOutput.textContent = data.keywords.join(", ");
-      } else {
-        keywordsOutput.textContent = data.keywords || "No keywords found.";
-      }
+      summaryOutput.innerHTML = data.summary.replace(/\n/g, "<br>");
+      keywordsOutput.textContent = data.keywords.join(", ");
 
       currentText = summaryOutput.innerText;
 
     } catch (err) {
       summaryOutput.textContent = "❌ " + err.message;
-      console.error(err);
     }
   });
 
-  // ---------- Generate Quiz ----------
+  // ----------- Generate Quiz ----------
   quizBtn.addEventListener("click", async () => {
     const summary = summaryOutput.innerText.trim();
-    if (!summary) {
-      alert("Please summarize first!");
-      return;
-    }
+    if (!summary) return alert("Summarize first!");
 
     quizOutput.innerHTML = "⏳ Generating quiz...";
+
     try {
-      const response = await fetch("/api/generate_quiz", {
+      const res = await fetch("/api/generate_quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ summary }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Quiz generation failed.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
 
-      quizOutput.innerHTML = data.quiz
-        .replace(/\n/g, "<br>")
-        .replace(/Q:/g, "<strong>Q:</strong>")
-        .replace(/A:/g, "<strong>A:</strong>");
+      quizOutput.innerHTML = data.quiz.replace(/\n/g, "<br>");
+
     } catch (err) {
       quizOutput.innerHTML = "❌ " + err.message;
     }
   });
 
-  // ---------- Text-to-Speech ----------
+  // ----------- TTS Speak ----------
   speakBtn.addEventListener("click", () => {
-    if (!currentText) return alert("Please summarize text first!");
+    if (!currentText) return alert("Summarize first!");
 
-    if (isPaused && currentUtterance) {
-      window.speechSynthesis.resume();
-      isPaused = false;
-      return;
-    }
-
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
-
-    currentUtterance = new SpeechSynthesisUtterance(
-      summaryOutput.innerText || currentText
-    );
-
-    // 🔇 Clean text (remove emojis/symbols)
-    const cleanText = currentUtterance.text.replace(/[^\w\s,.!?;:'"-]/g, "");
-    currentUtterance.text = cleanText;
-
-    window.speechSynthesis.speak(currentUtterance);
-    currentUtterance.onend = () => (isPaused = false);
+    const utterance = new SpeechSynthesisUtterance(currentText);
+    window.speechSynthesis.speak(utterance);
   });
 
   stopBtn.addEventListener("click", () => {
     window.speechSynthesis.cancel();
-    isPaused = false;
   });
 
-  // ---------- Reader View ----------
+  // ----------- Reader View -----------
   readerViewBtn.addEventListener("click", () => {
-    if (!currentText) {
-      alert("Please summarize text first!");
-      return;
-    }
-
-    // Save summary content for reader view
+    if (!currentText) return alert("Summarize first!");
     localStorage.setItem("learnovaSummary", summaryOutput.innerHTML);
     window.open("/reader-view", "_blank");
   });
+
+  // ----------- MICROPHONE (Speech-to-Text) -----------
+  let recognition;
+  let isRecording = false;
+
+  if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+
+    const SpeechRecognition = 
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    micBtn.onclick = () => {
+
+      if (!isRecording) {
+        recognition.start();
+        isRecording = true;
+        micBtn.textContent = "🎙️ Listening...";
+      } else {
+        recognition.stop();
+      }
+    };
+
+    recognition.addEventListener("result", (e) => {
+      let transcript = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      textInput.value = textInput.value.trim() + " " + transcript;
+    });
+
+    recognition.addEventListener("end", () => {
+      isRecording = false;
+      micBtn.textContent = "🎤 Speak";
+    });
+
+  } else {
+    micBtn.disabled = true;
+    micBtn.title = "Speech recognition not supported on this browser.";
+  }
+
 });
