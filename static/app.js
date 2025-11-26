@@ -97,22 +97,22 @@ document.addEventListener("DOMContentLoaded", () => {
     window.open("/reader-view", "_blank");
   });
 
+ 
   // ----------- MICROPHONE (Speech-to-Text) -----------
   let recognition;
   let isRecording = false;
 
   if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 
-    const SpeechRecognition = 
+    const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
     recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.continuous = false;
-    recognition.interimResults = true;
+    recognition.interimResults = false;   // ⭐ FIX to avoid duplicated words
 
     micBtn.onclick = () => {
-
       if (!isRecording) {
         recognition.start();
         isRecording = true;
@@ -123,11 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     recognition.addEventListener("result", (e) => {
-      let transcript = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript;
-      }
-      textInput.value = textInput.value.trim() + " " + transcript;
+      let transcript = e.results[0][0].transcript;   // ⭐ Only final text
+      textInput.value = (textInput.value + " " + transcript).trim();
     });
 
     recognition.addEventListener("end", () => {
@@ -140,4 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
     micBtn.title = "Speech recognition not supported on this browser.";
   }
 
+
 });
+
