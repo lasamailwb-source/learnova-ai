@@ -5,7 +5,7 @@
   <title>📚 Learnova AI Assistant</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Font & Styles -->
+  <!-- Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
@@ -15,50 +15,43 @@
   <h1>📖 Learnova AI Assistant</h1>
 
   <div class="container">
-    <!-- 🟣 LEFT SIDE — Input -->
+
+    <!-- LEFT SIDE INPUT -->
     <div class="card">
       <h2>📝 Enter Text or Upload File</h2>
+
       <form id="uploadForm">
+
         <textarea id="textInput" placeholder="Type or paste your study notes here..."></textarea>
 
-        <!-- 🎤 Mic Button (NEW) -->
+        <!-- 🎤 MIC BUTTON -->
         <div class="input-actions">
           <button type="button" id="micBtn" class="secondary-btn">🎤 Speak</button>
         </div>
 
         <input type="file" id="fileInput" name="file" />
+
         <button type="submit" id="summarizeBtn">⚡ Summarize Text</button>
       </form>
     </div>
 
-    <!-- 🟢 RIGHT SIDE — Output -->
+    <!-- RIGHT SIDE OUTPUT -->
     <div class="card">
       <h2>🧩 Summary</h2>
-      <div id="summaryOutput" class="summary-box">
-        Your summary will appear here.
-      </div>
+      <div id="summaryOutput" class="summary-box">Your summary will appear here.</div>
 
-      <!-- ✅ Simplified Controls -->
       <div class="summary-actions">
         <button id="speakBtn">🔊 Speak</button>
         <button id="stopBtn">⏹ Stop</button>
         <button id="readerViewBtn">📰 Open in Reader View</button>
       </div>
 
-      <!-- 🟢 Removed: speed control + progress line + export PDF -->
-
       <h2>🌱 Key Concepts</h2>
-      <div id="keywordsOutput" class="output-box">
-        Extracted keywords will appear here.
-      </div>
+      <div id="keywordsOutput" class="output-box">Extracted keywords will appear here.</div>
 
       <h2>🎯 Quiz & Answers</h2>
-      <div class="quiz-toolbar">
-        <button id="quizBtn">🎲 Generate Quiz</button>
-      </div>
-      <div id="quizOutput" class="output-box">
-        Click “Generate Quiz” to create questions.
-      </div>
+      <button id="quizBtn">🎲 Generate Quiz</button>
+      <div id="quizOutput" class="output-box">Click “Generate Quiz” to create questions.</div>
     </div>
   </div>
 
@@ -68,7 +61,5 @@
 
   <!-- JS Files -->
   <script src="{{ url_for('static', filename='app.js') }}"></script>
-  <script src="{{ url_for('static', filename='readerView.js') }}"></script>
-  <script src="{{ url_for('static', filename='speech.js') }}"></script>
 </body>
 </html>
