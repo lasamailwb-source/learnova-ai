@@ -6,3 +6,5 @@ pytesseract
 python-docx
 PyPDF2
 pdf2image
+SQLAlchemy
+psycopg2-binary
