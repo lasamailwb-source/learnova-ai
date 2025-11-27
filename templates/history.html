@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>History | Learnova AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="app-body">
+  <div class="layout">
+
+    <!-- Sidebar (same as index) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-circle">L</div>
+        <div class="logo-text">
+          <div class="logo-title">Learnova AI</div>
+          <div class="logo-subtitle">Study Assistant</div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a href="{{ url_for('home') }}" class="nav-item">📊 Dashboard</a>
+        <a href="{{ url_for('history') }}" class="nav-item active">📜 History</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar">{{ username[0] | upper }}</div>
+          <div>
+            <div class="user-name">{{ username }}</div>
+            <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <header class="topbar">
+        <h1 class="topbar-title">Your Activity History</h1>
+      </header>
+
+      <section class="card">
+        {% if history %}
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Action</th>
+                <th>Input Preview</th>
+                <th>Output Preview</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in history %}
+                <tr>
+                  <td>{{ h.timestamp }}</td>
+                  <td>{{ h.action }}</td>
+                  <td>{{ h.input_preview[:80] }}{% if h.input_preview|length > 80 %}...{% endif %}</td>
+                  <td>{{ h.output_preview[:80] }}{% if h.output_preview|length > 80 %}...{% endif %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No history yet. Try summarizing or generating a quiz!</p>
+        {% endif %}
+      </section>
+    </main>
+  </div>
+</body>
+</html>
