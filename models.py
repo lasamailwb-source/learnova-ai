@@ -1,12 +1,21 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.orm import declarative_base, sessionmaker
 
+# Load DATABASE_URL from environment (Render)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Create engine
-engine = create_engine(DATABASE_URL, echo=False)
+# Ensure the URL exists
+if not DATABASE_URL:
+    raise RuntimeError("❌ DATABASE_URL environment variable is not set!")
+
+# Create engine – with safe connection handling for Render
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True,       # 🟢 Prevents broken connections
+    future=True               # 🟢 SQLAlchemy 2.0 behavior
+)
 
 # Base class
 Base = declarative_base()
@@ -22,8 +31,8 @@ class ActivityLog(Base):
     ip_address = Column(String(200))
     timestamp = Column(String(200))
 
-# Create tables
+# Create database tables (important for first run)
 Base.metadata.create_all(engine)
 
-# Session
-SessionLocal = sessionmaker(bind=engine)
+# Session for queries
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
