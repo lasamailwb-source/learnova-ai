@@ -98,45 +98,60 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
  
-  // ----------- MICROPHONE (Speech-to-Text) -----------
-  let recognition;
-  let isRecording = false;
+ // ----------- MICROPHONE (Speech-to-Text with REAL-TIME TYPING) -----------
+let recognition;
+let isRecording = false;
+let finalTranscript = "";
 
-  if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;   // ⭐ FIX to avoid duplicated words
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.continuous = true;      // ⭐ Allow long speech
+  recognition.interimResults = true;  // ⭐ Enable real-time typing
 
-    micBtn.onclick = () => {
-      if (!isRecording) {
-        recognition.start();
-        isRecording = true;
-        micBtn.textContent = "🎙️ Listening...";
+  micBtn.onclick = () => {
+    if (!isRecording) {
+      finalTranscript = "";
+      recognition.start();
+      isRecording = true;
+      micBtn.textContent = "🎙️ Listening...";
+    } else {
+      recognition.stop();
+    }
+  };
+
+  recognition.onresult = (event) => {
+    let interim = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript + " ";
       } else {
-        recognition.stop();
+        interim = transcript;
       }
-    };
+    }
 
-    recognition.addEventListener("result", (e) => {
-      let transcript = e.results[0][0].transcript;   // ⭐ Only final text
-      textInput.value = (textInput.value + " " + transcript).trim();
-    });
+    // ⭐ Live typing (final + interim)
+    textInput.value = (finalTranscript + interim).trim();
+  };
 
-    recognition.addEventListener("end", () => {
-      isRecording = false;
-      micBtn.textContent = "🎤 Speak";
-    });
+  recognition.onend = () => {
+    isRecording = false;
+    micBtn.textContent = "🎤 Speak";
+  };
 
-  } else {
-    micBtn.disabled = true;
-    micBtn.title = "Speech recognition not supported on this browser.";
-  }
+} else {
+  micBtn.disabled = true;
+  micBtn.title = "Speech recognition not supported on this browser.";
+}
 
 
 });
+
 
