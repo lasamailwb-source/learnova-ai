@@ -98,10 +98,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
  
- // ----------- MICROPHONE (Speech-to-Text with REAL-TIME TYPING) -----------
+// ----------- MICROPHONE (Smooth Real-Time Streaming) -----------
 let recognition;
 let isRecording = false;
-let finalTranscript = "";
 
 if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 
@@ -110,12 +109,14 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
-  recognition.continuous = true;      // ⭐ Allow long speech
-  recognition.interimResults = true;  // ⭐ Enable real-time typing
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  let finalText = "";   // stores clean completed text
 
   micBtn.onclick = () => {
     if (!isRecording) {
-      finalTranscript = "";
+      finalText = textInput.value.trim() + " ";  // keep old text
       recognition.start();
       isRecording = true;
       micBtn.textContent = "🎙️ Listening...";
@@ -125,20 +126,24 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
   };
 
   recognition.onresult = (event) => {
-    let interim = "";
+    let interimText = "";
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript;
 
       if (event.results[i].isFinal) {
-        finalTranscript += transcript + " ";
+        finalText += transcript + " ";
       } else {
-        interim = transcript;
+        interimText = transcript;
       }
     }
 
-    // ⭐ Live typing (final + interim)
-    textInput.value = (finalTranscript + interim).trim();
+    // ⭐ Smooth updating: final part stays, interim updates live
+    const combined = (finalText + interimText).trim();
+
+    if (!textInput.matches(':focus')) {
+      textInput.value = combined;
+    }
   };
 
   recognition.onend = () => {
@@ -153,5 +158,6 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 
 
 });
+
 
 
