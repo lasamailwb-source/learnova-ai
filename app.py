@@ -14,6 +14,8 @@ from utils import (
     extract_keywords,
     generate_quiz,
 )
+from datetime import datetime
+from models import SessionLocal, ActivityLog
 import io
 import os
 import json
@@ -22,7 +24,7 @@ import json
 # APP CONFIG
 # -------------------------------------
 app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = "learnova-secret-key"        # Change if you want
+app.secret_key = "learnova-secret-key"               # Change if needed
 USER_DB = "users.json"
 
 # -------------------------------------
@@ -30,11 +32,12 @@ USER_DB = "users.json"
 # -------------------------------------
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
 # -------------------------------------
-# USER ACCOUNT FUNCTIONS
+# USER ACCOUNT FUNCTIONS (Local JSON)
 # -------------------------------------
 def load_users():
-    """Load user database from JSON."""
+    """Load user credentials."""
     if not os.path.exists(USER_DB):
         return {}
     try:
@@ -45,7 +48,7 @@ def load_users():
 
 
 def save_users(data):
-    """Save user database to JSON."""
+    """Save user credentials."""
     with open(USER_DB, "w") as f:
         json.dump(data, f, indent=4)
 
@@ -60,6 +63,28 @@ def login_required(func):
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__
     return wrapper
+
+
+# -------------------------------------
+# DATABASE LOGGING FUNCTION (PostgreSQL)
+# -------------------------------------
+def log_action(action, input_length=0, output_length=0, ip="Unknown"):
+    """Insert an activity entry into PostgreSQL."""
+    try:
+        db = SessionLocal()
+        row = ActivityLog(
+            action=action,
+            input_length=input_length,
+            output_length=output_length,
+            ip_address=ip,
+            timestamp=datetime.now().isoformat()
+        )
+        db.add(row)
+        db.commit()
+    except Exception as e:
+        print("⚠️ Logging failed:", e)
+    finally:
+        db.close()
 
 
 # -------------------------------------
@@ -117,7 +142,7 @@ def logout():
 
 
 # -------------------------------------
-# HOME PAGE (PROTECTED)
+# HOME PAGE
 # -------------------------------------
 @app.route("/")
 @login_required
@@ -126,7 +151,7 @@ def home():
 
 
 # -------------------------------------
-# READER VIEW PAGE (PROTECTED)
+# READER VIEW PAGE
 # -------------------------------------
 @app.route("/reader-view")
 @login_required
@@ -151,11 +176,11 @@ def process_notes():
     try:
         text_content = ""
 
-        # Check text input
+        # Direct text input
         if "text" in request.form and request.form["text"].strip():
             text_content = request.form["text"].strip()
 
-        # Otherwise process uploaded file
+        # Uploaded file
         elif "file" in request.files:
             file = request.files["file"]
             filename = file.filename or ""
@@ -163,28 +188,27 @@ def process_notes():
             file_stream = io.BytesIO(file.read())
             file_bytes = file_stream.getvalue()
 
-            if not file_bytes or len(file_bytes) < 100:
+            if not file_bytes or len(file_bytes) < 50:
                 return jsonify({"error": "Uploaded file is empty or unreadable"}), 400
 
             text_content = extract_text_from_bytes(file_bytes, filename)
 
-        # Validate
-        if not isinstance(text_content, str):
-            return jsonify({"error": "Internal text extraction error"}), 500
-
         clean_text = text_content.strip()
 
-        if (
-            not clean_text
-            or len(clean_text) < 20
-            or clean_text.startswith("[Error]")
-            or clean_text.startswith("[Warning]")
-        ):
-            return jsonify({"error": "No text or file content found"}), 400
+        if not clean_text or len(clean_text) < 10:
+            return jsonify({"error": "No usable text found"}), 400
 
-        # Generate summary + keywords
+        # Process content
         summary = summarize_text(client, clean_text)
         keywords = extract_keywords(client, summary)
+
+        # Log action to PostgreSQL
+        log_action(
+            action="summarize",
+            input_length=len(clean_text),
+            output_length=len(summary),
+            ip=request.remote_addr
+        )
 
         return jsonify({"summary": summary, "keywords": keywords}), 200
 
@@ -205,13 +229,22 @@ def api_generate_quiz():
         question_count = int(data.get("question_count") or 10)
 
         if not summary:
-            return jsonify({"error": "Summary text is required"}), 400
+            return jsonify({"error": "Summary text required"}), 400
 
         quiz = generate_quiz(client, summary, question_count=question_count)
+
+        # Log to PostgreSQL
+        log_action(
+            action="generate_quiz",
+            input_length=len(summary),
+            output_length=len(quiz),
+            ip=request.remote_addr
+        )
+
         return jsonify({"quiz": quiz}), 200
 
     except Exception as e:
-        print("❌ ERROR in /api/generate_quiz:", e)
+        print("❌ ERROR in /api_generate_quiz:", e)
         return jsonify({"error": str(e)}), 500
 
 
