@@ -1,65 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>📚 Learnova AI Assistant</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Styles -->
+  <meta charset="UTF-8">
+  <title>Learnova AI Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-
 </head>
+<body class="app-body">
+  <div class="layout">
 
-<body>
-  <h1>📖 Learnova AI Assistant</h1>
-
-  <div class="container">
-
-    <!-- LEFT SIDE INPUT -->
-    <div class="card">
-      <h2>📝 Enter Text or Upload File</h2>
-
-      <form id="uploadForm">
-
-        <textarea id="textInput" placeholder="Type or paste your study notes here..."></textarea>
-
-        <!-- 🎤 MIC BUTTON -->
-        <div class="input-actions">
-          <button type="button" id="micBtn" class="secondary-btn">🎤 Speak</button>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-circle">L</div>
+        <div class="logo-text">
+          <div class="logo-title">Learnova AI</div>
+          <div class="logo-subtitle">Study Assistant</div>
         </div>
-
-        <input type="file" id="fileInput" name="file" />
-
-        <button type="submit" id="summarizeBtn">⚡ Summarize Text</button>
-      </form>
-    </div>
-
-    <!-- RIGHT SIDE OUTPUT -->
-    <div class="card">
-      <h2>🧩 Summary</h2>
-      <div id="summaryOutput" class="summary-box">Your summary will appear here.</div>
-
-      <div class="summary-actions">
-        <button id="speakBtn">🔊 Speak</button>
-        <button id="stopBtn">⏹ Stop</button>
-        <button id="readerViewBtn">📰 Open in Reader View</button>
       </div>
 
-      <h2>🌱 Key Concepts</h2>
-      <div id="keywordsOutput" class="output-box">Extracted keywords will appear here.</div>
+      <nav class="nav-menu">
+        <a href="{{ url_for('home') }}" class="nav-item active">📊 Dashboard</a>
+        <a href="{{ url_for('history') }}" class="nav-item">📜 History</a>
+      </nav>
 
-      <h2>🎯 Quiz & Answers</h2>
-      <button id="quizBtn">🎲 Generate Quiz</button>
-      <div id="quizOutput" class="output-box">Click “Generate Quiz” to create questions.</div>
-    </div>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar">{{ username[0] | upper }}</div>
+          <div>
+            <div class="user-name">{{ username }}</div>
+            <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top bar -->
+      <header class="topbar">
+        <h1 class="topbar-title">Dashboard</h1>
+        <div class="topbar-right">
+          <span class="topbar-welcome">Hello, {{ username }} 👋</span>
+        </div>
+      </header>
+
+      <section class="content-grid">
+
+        <!-- LEFT: Input card -->
+        <div class="card">
+          <h2>📝 Enter Text or Upload File</h2>
+          <form id="uploadForm">
+            <textarea id="textInput" placeholder="Speak or paste your study notes here..."></textarea>
+
+            <div class="input-actions">
+              <button type="button" id="micBtn" class="secondary-btn">🎤 Speak</button>
+            </div>
+
+            <input type="file" id="fileInput" name="file" />
+
+            <button type="submit" id="summarizeBtn" class="primary-btn">
+              ⚡ Summarize Text
+            </button>
+          </form>
+        </div>
+
+        <!-- RIGHT: Output card -->
+        <div class="card">
+          <h2>🧩 Summary</h2>
+          <div id="summaryOutput" class="summary-box">
+            Your summary will appear here.
+          </div>
+
+          <div class="summary-actions">
+            <button id="speakBtn" class="secondary-btn">🔊 Speak</button>
+            <button id="stopBtn" class="secondary-btn">⏹ Stop</button>
+            <button id="readerViewBtn" class="secondary-btn">📰 Reader View</button>
+          </div>
+
+          <h2>🌱 Key Concepts</h2>
+          <div id="keywordsOutput" class="output-box">
+            Extracted keywords will appear here.
+          </div>
+
+          <h2>🎯 Quiz & Answers</h2>
+          <button id="quizBtn" class="primary-btn">🎲 Generate Quiz</button>
+          <div id="quizOutput" class="output-box">
+            Click “Generate Quiz” to create questions.
+          </div>
+        </div>
+
+      </section>
+    </main>
   </div>
 
-  <footer>
-    © 2025 Learnova AI Assistant | Crafted by Team Learnova 💻
-  </footer>
-
-  <!-- JS Files -->
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
