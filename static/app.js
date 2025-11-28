@@ -1,163 +1,337 @@
 document.addEventListener("DOMContentLoaded", () => {
-
+  const uploadForm = document.getElementById("uploadForm");
   const textInput = document.getElementById("textInput");
   const fileInput = document.getElementById("fileInput");
+
   const summarizeBtn = document.getElementById("summarizeBtn");
   const summaryOutput = document.getElementById("summaryOutput");
   const keywordsOutput = document.getElementById("keywordsOutput");
+
   const quizBtn = document.getElementById("quizBtn");
   const quizOutput = document.getElementById("quizOutput");
+
   const speakBtn = document.getElementById("speakBtn");
   const stopBtn = document.getElementById("stopBtn");
   const readerViewBtn = document.getElementById("readerViewBtn");
-  const micBtn = document.getElementById("micBtn");
 
-  let currentText = "";
+  const micBtn = document.getElementById("micBtn");
+  const micLabel = document.getElementById("micLabel");
+
+  /* -----------------------------
+       Helper: show / hide loading
+  ------------------------------ */
+  function setSummaryLoading(isLoading) {
+    if (isLoading) {
+      summaryOutput.textContent = "⏳ Summarizing your notes...";
+      keywordsOutput.textContent = "";
+    }
+  }
+
+  function setQuizLoading(isLoading) {
+    if (isLoading) {
+      quizOutput.textContent = "🎲 Generating quiz questions...";
+    }
+  }
+
+  /* -----------------------------
+         SUMMARIZE / UPLOAD
+  ------------------------------ */
+  if (uploadForm) {
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData();
+
+      const rawText = (textInput.value || "").trim();
+      if (rawText) {
+        formData.append("text", rawText);
+      } else if (fileInput.files.length > 0) {
+        formData.append("file", fileInput.files[0]);
+      } else {
+        alert("Please type text or upload a file first.");
+        return;
+      }
+
+      summarizeBtn.disabled = true;
+      setSummaryLoading(true);
+
+      try {
+        const res = await fetch("/api/processnotes", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          summaryOutput.textContent = data.error || "An error occurred.";
+          keywordsOutput.textContent = "";
+          return;
+        }
+
+        summaryOutput.textContent = data.summary || "No summary returned.";
+        keywordsOutput.textContent = data.keywords || "No keywords returned.";
+      } catch (err) {
+        console.error(err);
+        summaryOutput.textContent = "Error connecting to server.";
+        keywordsOutput.textContent = "";
+      } finally {
+        summarizeBtn.disabled = false;
+      }
+    });
+  }
+
+  /* -----------------------------
+              QUIZ
+  ------------------------------ */
+  if (quizBtn) {
+    quizBtn.addEventListener("click", async () => {
+      const summaryText = (summaryOutput.textContent || "").trim();
+      if (!summaryText) {
+        alert("Please summarize some text first.");
+        return;
+      }
+
+      setQuizLoading(true);
+
+      try {
+        const res = await fetch("/api/generate_quiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            summary: summaryText,
+            question_count: 10,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          quizOutput.textContent = data.error || "Quiz generation failed.";
+          return;
+        }
+
+        quizOutput.textContent = data.quiz || "No quiz returned.";
+      } catch (err) {
+        console.error(err);
+        quizOutput.textContent = "Error connecting to server.";
+      } finally {
+        setQuizLoading(false);
+      }
+    });
+  }
+
+  /* -----------------------------
+           TEXT TO SPEECH
+  ------------------------------ */
   let currentUtterance = null;
 
-  // ----------- Summarize ----------
-  summarizeBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-
-    const text = textInput.value.trim();
-    const file = fileInput.files[0];
-
-    if (!text && !file) {
-      alert("Please enter text or upload a file.");
+  function speakSummary() {
+    const text = (summaryOutput.textContent || "").trim();
+    if (!text) {
+      alert("No summary to speak.");
       return;
     }
 
-    const formData = new FormData();
-    if (text) formData.append("text", text);
-    if (file) formData.append("file", file);
-
-    summaryOutput.textContent = "⏳ Summarizing...";
-    keywordsOutput.textContent = "";
-    quizOutput.textContent = "";
-
-    try {
-      const res = await fetch("/api/processnotes", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      summaryOutput.innerHTML = data.summary.replace(/\n/g, "<br>");
-      keywordsOutput.textContent = data.keywords.join(", ");
-
-      currentText = summaryOutput.innerText;
-
-    } catch (err) {
-      summaryOutput.textContent = "❌ " + err.message;
+    if (!("speechSynthesis" in window)) {
+      alert("Speech synthesis is not supported in this browser.");
+      return;
     }
-  });
 
-  // ----------- Generate Quiz ----------
-  quizBtn.addEventListener("click", async () => {
-    const summary = summaryOutput.innerText.trim();
-    if (!summary) return alert("Summarize first!");
-
-    quizOutput.innerHTML = "⏳ Generating quiz...";
-
-    try {
-      const res = await fetch("/api/generate_quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      quizOutput.innerHTML = data.quiz.replace(/\n/g, "<br>");
-
-    } catch (err) {
-      quizOutput.innerHTML = "❌ " + err.message;
+    if (currentUtterance) {
+      window.speechSynthesis.cancel();
+      currentUtterance = null;
     }
-  });
 
-  // ----------- TTS Speak ----------
-  speakBtn.addEventListener("click", () => {
-    if (!currentText) return alert("Summarize first!");
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+    utter.onend = () => {
+      currentUtterance = null;
+    };
 
-    const utterance = new SpeechSynthesisUtterance(currentText);
-    window.speechSynthesis.speak(utterance);
-  });
+    currentUtterance = utter;
+    window.speechSynthesis.speak(utter);
+  }
 
-  stopBtn.addEventListener("click", () => {
-    window.speechSynthesis.cancel();
-  });
+  function stopSpeech() {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      currentUtterance = null;
+    }
+  }
 
-  // ----------- Reader View -----------
-  readerViewBtn.addEventListener("click", () => {
-    if (!currentText) return alert("Summarize first!");
-    localStorage.setItem("learnovaSummary", summaryOutput.innerHTML);
-    window.open("/reader-view", "_blank");
-  });
+  if (speakBtn) speakBtn.addEventListener("click", speakSummary);
+  if (stopBtn) stopBtn.addEventListener("click", stopSpeech);
 
- 
-// ----------- MICROPHONE (Smooth Real-Time Streaming) -----------
-let recognition;
-let isRecording = false;
+  /* -----------------------------
+           READER VIEW
+  ------------------------------ */
+  if (readerViewBtn) {
+    readerViewBtn.addEventListener("click", () => {
+      const summaryText = (summaryOutput.textContent || "").trim();
+      const keywordsText = (keywordsOutput.textContent || "").trim();
 
-if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      // Simple way: put in localStorage and open reader-view
+      try {
+        localStorage.setItem("learnova_summary", summaryText);
+        localStorage.setItem("learnova_keywords", keywordsText);
+      } catch (e) {
+        console.warn("LocalStorage not available", e);
+      }
 
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+      window.open("/reader-view", "_blank");
+    });
+  }
 
-  recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.continuous = true;
-  recognition.interimResults = true;
+  /* -----------------------------
+       MICROPHONE – STYLE C
+       Real-time speech-to-text
+  ------------------------------ */
+  let recognition = null;
+  let isListening = false;
+  let finalTranscript = "";
 
-  let finalText = "";   // stores clean completed text
+  function cleanTranscript(text) {
+    if (!text) return "";
 
-  micBtn.onclick = () => {
-    if (!isRecording) {
-      finalText = textInput.value.trim() + " ";  // keep old text
+    // Remove extra spaces
+    text = text.replace(/\s+/g, " ").trim();
+
+    // Basic filler removal (optional)
+    const fillers = ["uh", "um", "er", "ah"];
+    const pattern = new RegExp("\\b(" + fillers.join("|") + ")\\b", "gi");
+    text = text.replace(pattern, "").replace(/\s+/g, " ").trim();
+
+    return text;
+  }
+
+  function addLightPunctuation(text) {
+    if (!text) return "";
+
+    text = text.trim();
+
+    // Capitalize first letter
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+
+    // Add period if missing
+    if (!/[.!?]$/.test(text)) {
+      text += ".";
+    }
+
+    return text;
+  }
+
+  function initRecognition() {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Your browser does not support speech recognition.");
+      return null;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.continuous = true; // better streaming
+
+    rec.onstart = () => {
+      isListening = true;
+      if (micBtn) {
+        micBtn.setAttribute("data-state", "listening");
+      }
+      if (micLabel) {
+        micLabel.textContent = "Listening... tap to stop";
+      }
+    };
+
+    rec.onerror = (e) => {
+      console.warn("Speech recognition error:", e);
+    };
+
+    rec.onresult = (event) => {
+      let interimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0].transcript;
+
+        if (result.isFinal) {
+          finalTranscript += " " + transcript;
+          finalTranscript = cleanTranscript(finalTranscript);
+        } else {
+          interimTranscript += " " + transcript;
+        }
+      }
+
+      const combined =
+        (finalTranscript + " " + interimTranscript).replace(/\s+/g, " ").trim();
+
+      textInput.value = combined;
+    };
+
+    rec.onend = () => {
+      // Stopped (user or silence)
+      isListening = false;
+
+      if (micBtn) {
+        micBtn.setAttribute("data-state", "idle");
+      }
+      if (micLabel) {
+        micLabel.textContent = "Tap to speak";
+      }
+
+      // Final cleanup + light punctuation
+      let cleaned = cleanTranscript(textInput.value);
+      cleaned = addLightPunctuation(cleaned);
+      textInput.value = cleaned;
+    };
+
+    return rec;
+  }
+
+  function startListening() {
+    if (!recognition) {
+      recognition = initRecognition();
+      if (!recognition) return;
+    }
+
+    if (isListening) return;
+
+    // Start from any existing text
+    finalTranscript = (textInput.value || "").trim();
+    try {
       recognition.start();
-      isRecording = true;
-      micBtn.textContent = "🎙️ Listening...";
-    } else {
+    } catch (e) {
+      console.warn("Recognition already started:", e);
+    }
+  }
+
+  function stopListening() {
+    if (recognition && isListening) {
       recognition.stop();
     }
-  };
+  }
 
-  recognition.onresult = (event) => {
-    let interimText = "";
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-
-      if (event.results[i].isFinal) {
-        finalText += transcript + " ";
-      } else {
-        interimText = transcript;
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      if (!recognition && !("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+        alert("Speech recognition is not supported in this browser.");
+        return;
       }
-    }
 
-    // ⭐ Smooth updating: final part stays, interim updates live
-    const combined = (finalText + interimText).trim();
+      if (!recognition) {
+        recognition = initRecognition();
+        if (!recognition) return;
+      }
 
-    if (!textInput.matches(':focus')) {
-      textInput.value = combined;
-    }
-  };
-
-  recognition.onend = () => {
-    isRecording = false;
-    micBtn.textContent = "🎤 Speak";
-  };
-
-} else {
-  micBtn.disabled = true;
-  micBtn.title = "Speech recognition not supported on this browser.";
-}
-
-
+      if (!isListening) {
+        startListening();
+      } else {
+        stopListening();
+      }
+    });
+  }
 });
-
-
-
