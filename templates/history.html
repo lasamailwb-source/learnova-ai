@@ -4,11 +4,44 @@
   <meta charset="UTF-8">
   <title>History | Learnova AI</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* Small custom additions */
+    .delete-btn {
+      background: #ff4d4d;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .delete-btn:hover {
+      background: #e43e3e;
+    }
+    .clear-all-btn {
+      background: #ff2e8a;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .clear-all-btn:hover {
+      background: #e62076;
+    }
+    .action-col {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+  </style>
 </head>
+
 <body class="app-body">
   <div class="layout">
 
-    <!-- Sidebar (same as dashboard) -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo-circle">L</div>
@@ -34,7 +67,7 @@
       </div>
     </aside>
 
-    <!-- Main content -->
+    <!-- Main Page -->
     <main class="main-content">
       <header class="topbar">
         <h1 class="topbar-title">Your Activity History</h1>
@@ -44,63 +77,72 @@
       </header>
 
       <section class="card">
+
         <div class="history-header">
           <div>
             <h2 style="margin:0;">Recent Actions</h2>
             <p class="history-subtitle">Last 50 summaries and quizzes you generated.</p>
           </div>
-          <div class="history-search-wrapper">
-            <input
-              type="text"
-              id="historySearch"
-              placeholder="Search in actions, text or date..."
-            >
+
+          <div style="display:flex; gap:12px;">
+            <input id="historySearch" placeholder="Search..." />
+
+            <!-- CLEAR ALL BUTTON -->
+            <button id="clearAllBtn" class="clear-all-btn">
+              🗑 Clear All
+            </button>
           </div>
         </div>
 
         {% if history %}
-          <div class="history-table-wrapper">
-            <table class="history-table" id="historyTable">
-              <thead>
-                <tr>
-                  <th style="width: 18%;">Time</th>
-                  <th style="width: 12%;">Action</th>
-                  <th style="width: 40%;">Input Preview</th>
-                  <th style="width: 20%;">Output Preview</th>
-                  <th style="width: 10%;">View</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for h in history %}
-                  <tr>
-                    <td>{{ h.timestamp }}</td>
-                    <td>{{ h.action }}</td>
-                    <td>{{ h.input_preview[:80] }}{% if h.input_preview|length > 80 %}...{% endif %}</td>
-                    <td>{{ h.output_preview[:80] }}{% if h.output_preview|length > 80 %}...{% endif %}</td>
-                    <td>
-                      <button
-                        class="secondary-btn view-btn"
-                        data-time="{{ h.timestamp }}"
-                        data-action="{{ h.action }}"
-                        data-input="{{ h.input_preview | replace('"','&quot;') }}"
-                        data-output="{{ h.output_preview | replace('"','&quot;') }}"
-                      >
-                        🔍 View
-                      </button>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+        <div class="history-table-wrapper">
+          <table class="history-table" id="historyTable">
+            <thead>
+              <tr>
+                <th style="width: 16%;">Time</th>
+                <th style="width: 12%;">Action</th>
+                <th style="width: 36%;">Input Preview</th>
+                <th style="width: 18%;">Output Preview</th>
+                <th style="width: 18%;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in history %}
+              <tr>
+                <td>{{ h.timestamp }}</td>
+                <td>{{ h.action }}</td>
+
+                <td>{{ h.input_preview[:80] }}{% if h.input_preview|length > 80 %}...{% endif %}</td>
+                <td>{{ h.output_preview[:80] }}{% if h.output_preview|length > 80 %}...{% endif %}</td>
+
+                <td class="action-col">
+                  <!-- VIEW BTN -->
+                  <button
+                    class="secondary-btn view-btn"
+                    data-time="{{ h.timestamp }}"
+                    data-action="{{ h.action }}"
+                    data-input="{{ h.input_preview | replace('"','&quot;') }}"
+                    data-output="{{ h.output_preview | replace('"','&quot;') }}"
+                  >🔍</button>
+
+                  <!-- DELETE BTN -->
+                  <button class="delete-btn" data-id="{{ h.id }}">🗑</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
         {% else %}
-          <p>No history yet. Try summarizing or generating a quiz!</p>
+        <p>No history yet. Try summarizing or generating a quiz!</p>
         {% endif %}
+
       </section>
     </main>
   </div>
 
-  <!-- Modal for viewing full details -->
+  <!-- Modal Viewer -->
   <div id="historyModal" class="modal-backdrop hidden">
     <div class="modal">
       <div class="modal-header">
@@ -121,65 +163,93 @@
     </div>
   </div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const searchInput = document.getElementById("historySearch");
-      const table = document.getElementById("historyTable");
-      const rows = table ? table.querySelectorAll("tbody tr") : [];
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const searchInput = document.getElementById("historySearch");
+  const clearAllBtn = document.getElementById("clearAllBtn");
+  const table = document.getElementById("historyTable");
+  const rows = table ? table.querySelectorAll("tbody tr") : [];
 
-      // Simple search filter
-      if (searchInput && rows.length) {
-        searchInput.addEventListener("input", () => {
-          const q = searchInput.value.toLowerCase();
-          rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(q) ? "" : "none";
-          });
-        });
-      }
-
-      // Modal logic
-      const modal = document.getElementById("historyModal");
-      const modalMeta = document.getElementById("modalMeta");
-      const modalInput = document.getElementById("modalInput");
-      const modalOutput = document.getElementById("modalOutput");
-      const modalCloseBtn = document.getElementById("modalCloseBtn");
-
-      function openModal(time, action, input, output) {
-        if (!modal) return;
-        modalMeta.textContent = `${action.toUpperCase()} • ${time}`;
-        modalInput.textContent = input || "";
-        modalOutput.textContent = output || "";
-        modal.classList.remove("hidden");
-      }
-
-      function closeModal() {
-        if (!modal) return;
-        modal.classList.add("hidden");
-      }
-
-      if (modalCloseBtn) {
-        modalCloseBtn.addEventListener("click", closeModal);
-      }
-      if (modal) {
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) {
-            closeModal();
-          }
-        });
-      }
-
-      // Attach click handlers on "View" buttons
-      document.querySelectorAll(".view-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const time = btn.dataset.time || "";
-          const action = btn.dataset.action || "";
-          const input = btn.dataset.input || "";
-          const output = btn.dataset.output || "";
-          openModal(time, action, input, output);
-        });
+  /* -----------------------
+        SEARCH FILTER
+  ------------------------ */
+  if (searchInput && rows.length) {
+    searchInput.addEventListener("input", () => {
+      const q = searchInput.value.toLowerCase();
+      rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? "" : "none";
       });
     });
-  </script>
+  }
+
+  /* -----------------------
+      VIEW MODAL LOGIC
+  ------------------------ */
+  const modal = document.getElementById("historyModal");
+  const modalMeta = document.getElementById("modalMeta");
+  const modalInput = document.getElementById("modalInput");
+  const modalOutput = document.getElementById("modalOutput");
+  const modalCloseBtn = document.getElementById("modalCloseBtn");
+
+  function openModal(time, action, input, output) {
+    modalMeta.textContent = `${action.toUpperCase()} • ${time}`;
+    modalInput.textContent = input;
+    modalOutput.textContent = output;
+    modal.classList.remove("hidden");
+  }
+
+  modalCloseBtn.addEventListener("click", () => modal.classList.add("hidden"));
+  modal.addEventListener("click", e => {
+    if (e.target === modal) modal.classList.add("hidden");
+  });
+
+  document.querySelectorAll(".view-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openModal(btn.dataset.time, btn.dataset.action, btn.dataset.input, btn.dataset.output);
+    });
+  });
+
+  /* -----------------------
+       DELETE SINGLE ROW
+  ------------------------ */
+  document.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+
+      if (!confirm("Delete this history entry?")) return;
+
+      const res = await fetch(`/history/delete/${id}`, { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        btn.closest("tr").remove();
+      } else {
+        alert("Failed to delete.");
+      }
+    });
+  });
+
+  /* -----------------------
+        CLEAR ALL HISTORY
+  ------------------------ */
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to clear ALL history?")) return;
+
+      const res = await fetch(`/history/clear`, { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        document.querySelector("tbody").innerHTML = "";
+        alert("All history cleared.");
+      } else {
+        alert("Failed to clear history.");
+      }
+    });
+  }
+
+});
+</script>
+
 </body>
 </html>
