@@ -8,7 +8,7 @@
 <body class="app-body">
   <div class="layout">
 
-    <!-- Sidebar (same as index) -->
+    <!-- Sidebar (same as dashboard) -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo-circle">L</div>
@@ -38,35 +38,148 @@
     <main class="main-content">
       <header class="topbar">
         <h1 class="topbar-title">Your Activity History</h1>
+        <div class="topbar-right">
+          <span class="topbar-welcome">Hello, {{ username }} 👋</span>
+        </div>
       </header>
 
       <section class="card">
+        <div class="history-header">
+          <div>
+            <h2 style="margin:0;">Recent Actions</h2>
+            <p class="history-subtitle">Last 50 summaries and quizzes you generated.</p>
+          </div>
+          <div class="history-search-wrapper">
+            <input
+              type="text"
+              id="historySearch"
+              placeholder="Search in actions, text or date..."
+            >
+          </div>
+        </div>
+
         {% if history %}
-          <table class="history-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Action</th>
-                <th>Input Preview</th>
-                <th>Output Preview</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for h in history %}
+          <div class="history-table-wrapper">
+            <table class="history-table" id="historyTable">
+              <thead>
                 <tr>
-                  <td>{{ h.timestamp }}</td>
-                  <td>{{ h.action }}</td>
-                  <td>{{ h.input_preview[:80] }}{% if h.input_preview|length > 80 %}...{% endif %}</td>
-                  <td>{{ h.output_preview[:80] }}{% if h.output_preview|length > 80 %}...{% endif %}</td>
+                  <th style="width: 18%;">Time</th>
+                  <th style="width: 12%;">Action</th>
+                  <th style="width: 40%;">Input Preview</th>
+                  <th style="width: 20%;">Output Preview</th>
+                  <th style="width: 10%;">View</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {% for h in history %}
+                  <tr>
+                    <td>{{ h.timestamp }}</td>
+                    <td>{{ h.action }}</td>
+                    <td>{{ h.input_preview[:80] }}{% if h.input_preview|length > 80 %}...{% endif %}</td>
+                    <td>{{ h.output_preview[:80] }}{% if h.output_preview|length > 80 %}...{% endif %}</td>
+                    <td>
+                      <button
+                        class="secondary-btn view-btn"
+                        data-time="{{ h.timestamp }}"
+                        data-action="{{ h.action }}"
+                        data-input="{{ h.input_preview | replace('"','&quot;') }}"
+                        data-output="{{ h.output_preview | replace('"','&quot;') }}"
+                      >
+                        🔍 View
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         {% else %}
           <p>No history yet. Try summarizing or generating a quiz!</p>
         {% endif %}
       </section>
     </main>
   </div>
+
+  <!-- Modal for viewing full details -->
+  <div id="historyModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">History Detail</div>
+          <div class="modal-subtitle" id="modalMeta"></div>
+        </div>
+        <button id="modalCloseBtn" class="secondary-btn small-btn">✖</button>
+      </div>
+
+      <div class="modal-body">
+        <h3>Input</h3>
+        <div id="modalInput" class="modal-textbox"></div>
+
+        <h3>Output</h3>
+        <div id="modalOutput" class="modal-textbox"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const searchInput = document.getElementById("historySearch");
+      const table = document.getElementById("historyTable");
+      const rows = table ? table.querySelectorAll("tbody tr") : [];
+
+      // Simple search filter
+      if (searchInput && rows.length) {
+        searchInput.addEventListener("input", () => {
+          const q = searchInput.value.toLowerCase();
+          rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(q) ? "" : "none";
+          });
+        });
+      }
+
+      // Modal logic
+      const modal = document.getElementById("historyModal");
+      const modalMeta = document.getElementById("modalMeta");
+      const modalInput = document.getElementById("modalInput");
+      const modalOutput = document.getElementById("modalOutput");
+      const modalCloseBtn = document.getElementById("modalCloseBtn");
+
+      function openModal(time, action, input, output) {
+        if (!modal) return;
+        modalMeta.textContent = `${action.toUpperCase()} • ${time}`;
+        modalInput.textContent = input || "";
+        modalOutput.textContent = output || "";
+        modal.classList.remove("hidden");
+      }
+
+      function closeModal() {
+        if (!modal) return;
+        modal.classList.add("hidden");
+      }
+
+      if (modalCloseBtn) {
+        modalCloseBtn.addEventListener("click", closeModal);
+      }
+      if (modal) {
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            closeModal();
+          }
+        });
+      }
+
+      // Attach click handlers on "View" buttons
+      document.querySelectorAll(".view-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const time = btn.dataset.time || "";
+          const action = btn.dataset.action || "";
+          const input = btn.dataset.input || "";
+          const output = btn.dataset.output || "";
+          openModal(time, action, input, output);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
