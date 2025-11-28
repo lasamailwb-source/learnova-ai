@@ -53,8 +53,14 @@
             <textarea id="textInput" placeholder="Speak or paste your study notes here..."></textarea>
 
             <div class="input-actions">
-              <button type="button" id="micBtn" class="secondary-btn">🎤 Speak</button>
+              <div class="mic-wrapper">
+                <button type="button" id="micBtn" class="mic-btn" data-state="idle">
+                  <span class="mic-icon">🎤</span>
+                </button>
+                <div id="micLabel" class="mic-label">Tap to speak</div>
+              </div>
             </div>
+
 
             <input type="file" id="fileInput" name="file" />
 
@@ -96,3 +102,4 @@
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
+
