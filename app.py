@@ -24,7 +24,7 @@ import json
 # APP CONFIG
 # -------------------------------------
 app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = "learnova-secret-key"  # change if you like
+app.secret_key = "learnova-secret-key"
 USER_DB = "users.json"
 
 # -------------------------------------
@@ -34,7 +34,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 # -------------------------------------
-# USER ACCOUNT FUNCTIONS (JSON)
+# USER JSON FUNCTIONS
 # -------------------------------------
 def load_users():
     if not os.path.exists(USER_DB):
@@ -52,7 +52,7 @@ def save_users(data):
 
 
 # -------------------------------------
-# LOGIN REQUIRED DECORATOR
+# LOGIN REQUIRED
 # -------------------------------------
 def login_required(func):
     def wrapper(*args, **kwargs):
@@ -64,10 +64,9 @@ def login_required(func):
 
 
 # -------------------------------------
-# DB LOGGING HELPERS
+# LOGGING HELPERS
 # -------------------------------------
 def log_action(action, input_length=0, output_length=0, ip="Unknown"):
-    """General system log into activity_logs."""
     try:
         db = SessionLocal()
         row = ActivityLog(
@@ -86,7 +85,6 @@ def log_action(action, input_length=0, output_length=0, ip="Unknown"):
 
 
 def log_user_history(username, action, input_text="", output_text=""):
-    """Per-user history into user_history."""
     if not username:
         return
     try:
@@ -107,7 +105,7 @@ def log_user_history(username, action, input_text="", output_text=""):
 
 
 # -------------------------------------
-# ROUTE: REGISTER
+# REGISTER
 # -------------------------------------
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -132,7 +130,7 @@ def register():
 
 
 # -------------------------------------
-# ROUTE: LOGIN
+# LOGIN
 # -------------------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -154,7 +152,7 @@ def login():
 
 
 # -------------------------------------
-# ROUTE: LOGOUT
+# LOGOUT
 # -------------------------------------
 @app.route("/logout")
 @login_required
@@ -164,7 +162,7 @@ def logout():
 
 
 # -------------------------------------
-# HOME PAGE (DASHBOARD)
+# DASHBOARD
 # -------------------------------------
 @app.route("/")
 @login_required
@@ -173,7 +171,7 @@ def home():
 
 
 # -------------------------------------
-# USER HISTORY PAGE
+# HISTORY PAGE
 # -------------------------------------
 @app.route("/history")
 @login_required
@@ -195,7 +193,60 @@ def history():
 
 
 # -------------------------------------
-# READER VIEW PAGE
+# DELETE SINGLE HISTORY ENTRY
+# -------------------------------------
+@app.route("/history/delete/<int:entry_id>", methods=["POST"])
+@login_required
+def delete_history(entry_id):
+    try:
+        db = SessionLocal()
+        entry = db.query(UserHistory).filter(UserHistory.id == entry_id).first()
+
+        if not entry:
+            db.close()
+            return jsonify({"error": "Entry not found"}), 404
+
+        if entry.username != session.get("username"):
+            db.close()
+            return jsonify({"error": "Unauthorized"}), 403
+
+        db.delete(entry)
+        db.commit()
+        db.close()
+
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print("❌ Delete error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# -------------------------------------
+# DELETE ALL HISTORY FOR CURRENT USER
+# -------------------------------------
+@app.route("/history/clear", methods=["POST"])
+@login_required
+def clear_history():
+    try:
+        username = session.get("username")
+        db = SessionLocal()
+
+        db.query(UserHistory).filter(
+            UserHistory.username == username
+        ).delete()
+
+        db.commit()
+        db.close()
+
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print("❌ Clear history error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# -------------------------------------
+# READER VIEW
 # -------------------------------------
 @app.route("/reader-view")
 @login_required
@@ -204,7 +255,7 @@ def reader_view():
 
 
 # -------------------------------------
-# HEALTH CHECK
+# HEALTH
 # -------------------------------------
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -212,7 +263,7 @@ def health():
 
 
 # -------------------------------------
-# SUMMARIZATION ENDPOINT
+# SUMMARIZER
 # -------------------------------------
 @app.route("/api/processnotes", methods=["POST"])
 @login_required
@@ -220,20 +271,17 @@ def process_notes():
     try:
         text_content = ""
 
-        # Direct text input
         if "text" in request.form and request.form["text"].strip():
             text_content = request.form["text"].strip()
 
-        # Uploaded file
         elif "file" in request.files:
             file = request.files["file"]
             filename = file.filename or ""
-
             file_stream = io.BytesIO(file.read())
             file_bytes = file_stream.getvalue()
 
             if not file_bytes or len(file_bytes) < 50:
-                return jsonify({"error": "Uploaded file is empty or unreadable"}), 400
+                return jsonify({"error": "Uploaded file is empty"}), 400
 
             text_content = extract_text_from_bytes(file_bytes, filename)
 
@@ -242,35 +290,22 @@ def process_notes():
         if not clean_text or len(clean_text) < 10:
             return jsonify({"error": "No usable text found"}), 400
 
-        # Process content
         summary = summarize_text(client, clean_text)
         keywords = extract_keywords(client, summary)
 
-        # System-wide log
-        log_action(
-            action="summarize",
-            input_length=len(clean_text),
-            output_length=len(summary),
-            ip=request.remote_addr
-        )
-
-        # Per-user history log
-        log_user_history(
-            username=session.get("username"),
-            action="summarize",
-            input_text=clean_text,
-            output_text=summary
-        )
+        # Logging
+        log_action("summarize", len(clean_text), len(summary), request.remote_addr)
+        log_user_history(session.get("username"), "summarize", clean_text, summary)
 
         return jsonify({"summary": summary, "keywords": keywords}), 200
 
     except Exception as e:
-        print("❌ ERROR in /api/processnotes:", e)
+        print("❌ ERROR in summarizer:", e)
         return jsonify({"error": str(e)}), 500
 
 
 # -------------------------------------
-# QUIZ GENERATION ENDPOINT
+# QUIZ
 # -------------------------------------
 @app.route("/api/generate_quiz", methods=["POST"])
 @login_required
@@ -285,31 +320,18 @@ def api_generate_quiz():
 
         quiz = generate_quiz(client, summary, question_count=question_count)
 
-        # System log
-        log_action(
-            action="generate_quiz",
-            input_length=len(summary),
-            output_length=len(quiz),
-            ip=request.remote_addr
-        )
-
-        # Per-user history log
-        log_user_history(
-            username=session.get("username"),
-            action="generate_quiz",
-            input_text=summary,
-            output_text=quiz
-        )
+        log_action("generate_quiz", len(summary), len(quiz), request.remote_addr)
+        log_user_history(session.get("username"), "generate_quiz", summary, quiz)
 
         return jsonify({"quiz": quiz}), 200
 
     except Exception as e:
-        print("❌ ERROR in /api_generate_quiz:", e)
+        print("❌ ERROR in quiz:", e)
         return jsonify({"error": str(e)}), 500
 
 
 # -------------------------------------
-# SERVER RUN
+# RUN SERVER
 # -------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)
