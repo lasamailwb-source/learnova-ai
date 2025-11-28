@@ -334,4 +334,93 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  /* -----------------------------
+        EXPORT PDF (Summary + Quiz)
+  ------------------------------ */
+  const exportBtn = document.getElementById("exportPdfBtn");
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const summaryText = (summaryOutput.textContent || "").trim();
+      const quizText = (quizOutput.textContent || "").trim();
+
+      if (!summaryText && !quizText) {
+        alert("No summary or quiz available to export.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        unit: "pt",
+        format: "a4",
+      });
+
+      const leftMargin = 40;
+      let y = 60;
+
+      // Title
+      pdf.setFont("Helvetica", "bold");
+      pdf.setFontSize(20);
+      pdf.text("Learnova AI - Study Report", leftMargin, y);
+      y += 30;
+
+      // Date
+      pdf.setFont("Helvetica", "normal");
+      pdf.setFontSize(11);
+      pdf.text("Generated on: " + new Date().toLocaleString(), leftMargin, y);
+      y += 25;
+
+      // ----- SUMMARY -----
+      pdf.setFont("Helvetica", "bold");
+      pdf.setFontSize(16);
+      pdf.text("Summary", leftMargin, y);
+      y += 20;
+
+      pdf.setFont("Helvetica", "normal");
+      pdf.setFontSize(12);
+
+      const summaryLines = pdf.splitTextToSize(summaryText, 520);
+      summaryLines.forEach(line => {
+        if (y > 780) {  // new page
+          pdf.addPage();
+          y = 60;
+        }
+        pdf.text(line, leftMargin, y);
+        y += 16;
+      });
+
+      // ----- QUIZ -----
+      if (quizText) {
+        y += 20;
+        if (y > 760) {
+          pdf.addPage();
+          y = 60;
+        }
+
+        pdf.setFont("Helvetica", "bold");
+        pdf.setFontSize(16);
+        pdf.text("Quiz", leftMargin, y);
+        y += 20;
+
+        pdf.setFont("Helvetica", "normal");
+        pdf.setFontSize(12);
+
+        const quizLines = pdf.splitTextToSize(quizText, 520);
+        quizLines.forEach(line => {
+          if (y > 780) {
+            pdf.addPage();
+            y = 60;
+          }
+          pdf.text(line, leftMargin, y);
+          y += 16;
+        });
+      }
+
+      pdf.save("Learnova_Report.pdf");
+    });
+  }
+  
+  
 });
+
