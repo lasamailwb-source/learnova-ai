@@ -2,78 +2,216 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📘 Learnova Reader View</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reader View | Learnova AI</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
+
     body {
-      background: linear-gradient(145deg, #c8a6ff, #d1b3ff);
-      font-family: "Poppins", sans-serif;
-      color: #222;
       margin: 0;
-      padding: 0;
-      text-align: center;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: "Poppins", sans-serif;
     }
+
     .reader-container {
-      background: #fff;
-      margin: 2rem auto;
-      padding: 2rem;
-      border-radius: 20px;
-      max-width: 900px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    }
-    #readerContent {
-      text-align: left;
-      font-size: 1.05rem;
-      line-height: 1.7;
-      color: #333;
-      overflow-y: auto;
-      max-height: 70vh;
-      padding-right: 10px;
-    }
-    .reader-controls {
-      margin-top: 20px;
       display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 10px;
+      flex-direction: column;
+      height: 100vh;
     }
-    button {
-      background: #7b4eff;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 10px;
+
+    /* ----------------- Toolbar ----------------- */
+    .reader-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toolbar-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
       cursor: pointer;
-      font-weight: 600;
-      transition: 0.3s;
+      transition: 0.2s;
+      font-size: 14px;
     }
-    button:hover {
-      background: #6438d6;
+
+    .toolbar-btn:hover {
+      background: #475569;
     }
-    footer {
-      margin-top: 30px;
-      font-size: 0.85rem;
-      color: #444;
+
+    /* ----------------- Content Area ----------------- */
+    .reader-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 0.5fr;
+      gap: 20px;
+      padding: 20px 40px;
     }
+
+    /* Summary Panel */
+    .summary-panel {
+      padding: 20px;
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      overflow-y: auto;
+    }
+
+    .summary-panel h2 {
+      margin-bottom: 12px;
+      color: #a5b4fc;
+    }
+
+    .summary-text {
+      line-height: 1.6;
+      font-size: 16px;
+      white-space: pre-wrap;
+    }
+
+    /* Keywords Panel */
+    .keywords-panel {
+      padding: 20px;
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      overflow-y: auto;
+    }
+
+    .keywords-panel h2 {
+      margin-bottom: 12px;
+      color: #93c5fd;
+    }
+
+    .keyword-item {
+      padding: 8px 12px;
+      margin: 6px 0;
+      border-radius: 8px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      display: inline-block;
+      color: #e2e8f0;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .reader-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
-<body>
-  <h1>📖 Learnova Reader View</h1>
-  <div class="reader-container">
-    <div id="readerContent">Loading your summary...</div>
 
-    <div class="reader-controls">
-      <button id="playBtn">▶ Play</button>
-      <button id="pauseBtn">⏸ Pause</button>
-      <button id="stopBtn">⏹ Stop</button>
-      <button id="printBtn">🖨 Print / Save as PDF</button>
+<body>
+  <div class="reader-container">
+
+    <!-- Toolbar -->
+    <div class="reader-toolbar">
+      <div class="toolbar-left">
+        <button class="toolbar-btn" id="speakBtn">🔊 Speak</button>
+        <button class="toolbar-btn" id="stopBtn">⏹ Stop</button>
+        <button class="toolbar-btn" id="zoomInBtn">➕ Zoom In</button>
+        <button class="toolbar-btn" id="zoomOutBtn">➖ Zoom Out</button>
+      </div>
+
+      <div class="toolbar-right">
+        <button class="toolbar-btn" id="printBtn">🖨 Print</button>
+        <span id="wordCount" style="opacity:0.8;">0 words</span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="reader-content">
+
+      <!-- Summary Panel -->
+      <div class="summary-panel">
+        <h2>📖 Summary</h2>
+        <div id="summaryText" class="summary-text"></div>
+      </div>
+
+      <!-- Keywords Panel -->
+      <div class="keywords-panel">
+        <h2>🔑 Key Concepts</h2>
+        <div id="keywordsList"></div>
+      </div>
+
     </div>
   </div>
 
-  <footer>© 2025 Learnova AI Assistant | Reader Mode</footer>
+  <script>
+    /* ------------------ LOAD DATA ------------------ */
+    const summary = localStorage.getItem("learnova_summary") || "No summary found.";
+    const keywords = localStorage.getItem("learnova_keywords") || "No keywords found.";
 
-  <script src="{{ url_for('static', filename='readerView.js') }}"></script>
+    document.getElementById("summaryText").textContent = summary;
+
+    // Word count
+    const words = summary.trim().split(/\s+/).filter(w => w.length > 0);
+    document.getElementById("wordCount").textContent = words.length + " words";
+
+    /* Load keywords */
+    const keywordContainer = document.getElementById("keywordsList");
+    if (keywords.includes(",")) {
+      keywords.split(",").forEach(k => {
+        const item = document.createElement("div");
+        item.className = "keyword-item";
+        item.textContent = k.trim();
+        keywordContainer.appendChild(item);
+      });
+    } else {
+      keywordContainer.textContent = keywords;
+    }
+
+    /* ------------------ PRINT ------------------ */
+    document.getElementById("printBtn").addEventListener("click", () => {
+      window.print();
+    });
+
+    /* ------------------ ZOOM ------------------ */
+    let zoomLevel = 1;
+
+    document.getElementById("zoomInBtn").addEventListener("click", () => {
+      zoomLevel += 0.1;
+      document.querySelector(".summary-panel").style.fontSize = zoomLevel + "em";
+    });
+
+    document.getElementById("zoomOutBtn").addEventListener("click", () => {
+      zoomLevel = Math.max(0.5, zoomLevel - 0.1);
+      document.querySelector(".summary-panel").style.fontSize = zoomLevel + "em";
+    });
+
+    /* ------------------ SPEAK ------------------ */
+    let utterance = null;
+
+    document.getElementById("speakBtn").addEventListener("click", () => {
+      if ("speechSynthesis" in window) {
+        if (utterance) speechSynthesis.cancel();
+
+        utterance = new SpeechSynthesisUtterance(summary);
+        speechSynthesis.speak(utterance);
+      }
+    });
+
+    document.getElementById("stopBtn").addEventListener("click", () => {
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
+    });
+  </script>
+
 </body>
 </html>
