@@ -5,7 +5,6 @@
   <title>Reader View | Learnova AI</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
-
     body {
       margin: 0;
       background: #0f172a;
@@ -81,7 +80,7 @@
     .summary-text {
       line-height: 1.6;
       font-size: 16px;
-      white-space: pre-wrap;
+      white-space: normal; /* we now rely on <br> for breaks */
     }
 
     /* Keywords Panel */
@@ -159,10 +158,19 @@
     const summary = localStorage.getItem("learnova_summary") || "No summary found.";
     const keywords = localStorage.getItem("learnova_keywords") || "No keywords found.";
 
-    document.getElementById("summaryText").textContent = summary;
+    const summaryEl = document.getElementById("summaryText");
 
-    // Word count
-    const words = summary.trim().split(/\s+/).filter(w => w.length > 0);
+    // If it already contains <br>, just use it as HTML.
+    // If it's plain text with \n, convert those to <br>.
+    if (summary.includes("<br")) {
+      summaryEl.innerHTML = summary;
+    } else {
+      summaryEl.innerHTML = summary.replace(/\n/g, "<br>");
+    }
+
+    // Use visible text (no tags) for word count & speech
+    const plainSummary = summaryEl.innerText;
+    const words = plainSummary.trim().split(/\s+/).filter(w => w.length > 0);
     document.getElementById("wordCount").textContent = words.length + " words";
 
     /* Load keywords */
@@ -203,7 +211,8 @@
       if ("speechSynthesis" in window) {
         if (utterance) speechSynthesis.cancel();
 
-        utterance = new SpeechSynthesisUtterance(summary);
+        // Use cleaned text without <br> tags
+        utterance = new SpeechSynthesisUtterance(plainSummary || summary);
         speechSynthesis.speak(utterance);
       }
     });
