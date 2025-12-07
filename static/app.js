@@ -17,6 +17,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const micBtn = document.getElementById("micBtn");
   const micLabel = document.getElementById("micLabel");
 
+  // 🔄 Step 1: Keep text & file input in sync
+  // If user selects a file → clear typed text
+  // If user types text → clear previously selected file
+  if (textInput && fileInput) {
+    fileInput.addEventListener("change", () => {
+      textInput.value = "";
+    });
+
+    textInput.addEventListener("input", () => {
+      fileInput.value = "";
+    });
+  }
+
   /* -----------------------------
        Helper: show / hide loading
   ------------------------------ */
@@ -317,7 +330,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (micBtn) {
     micBtn.addEventListener("click", () => {
-      if (!recognition && !("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      if (
+        !recognition &&
+        !("webkitSpeechRecognition" in window) &&
+        !("SpeechRecognition" in window)
+      ) {
         alert("Speech recognition is not supported in this browser.");
         return;
       }
@@ -381,8 +398,9 @@ document.addEventListener("DOMContentLoaded", () => {
       pdf.setFontSize(12);
 
       const summaryLines = pdf.splitTextToSize(summaryText, 520);
-      summaryLines.forEach(line => {
-        if (y > 780) {  // new page
+      summaryLines.forEach((line) => {
+        if (y > 780) {
+          // new page
           pdf.addPage();
           y = 60;
         }
@@ -407,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pdf.setFontSize(12);
 
         const quizLines = pdf.splitTextToSize(quizText, 520);
-        quizLines.forEach(line => {
+        quizLines.forEach((line) => {
           if (y > 780) {
             pdf.addPage();
             y = 60;
@@ -420,7 +438,4 @@ document.addEventListener("DOMContentLoaded", () => {
       pdf.save("Learnova_Report.pdf");
     });
   }
-  
-  
 });
-
