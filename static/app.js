@@ -17,14 +17,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const micBtn = document.getElementById("micBtn");
   const micLabel = document.getElementById("micLabel");
 
-  // 🔄 Step 1: Keep text & file input in sync
-  // If user selects a file → clear typed text
-  // If user types text → clear previously selected file
+  /* -----------------------------
+       KEEP TEXT & FILE IN SYNC
+  ------------------------------ */
   if (textInput && fileInput) {
+    // If user selects a file → clear typed text
     fileInput.addEventListener("change", () => {
       textInput.value = "";
     });
 
+    // If user starts typing → clear selected file
     textInput.addEventListener("input", () => {
       fileInput.value = "";
     });
@@ -35,19 +37,24 @@ document.addEventListener("DOMContentLoaded", () => {
   ------------------------------ */
   function setSummaryLoading(isLoading) {
     if (isLoading) {
-      summaryOutput.textContent = "⏳ Summarizing your notes...";
-      keywordsOutput.textContent = "";
+      // Use innerHTML so later we can safely insert <br> summaries
+      summaryOutput.innerHTML = "⏳ Summarizing your notes...";
+      keywordsOutput.innerHTML = "";
+      // also clear any old quiz so dashboard looks clean
+      if (quizOutput) {
+        quizOutput.innerHTML = "";
+      }
     }
   }
 
   function setQuizLoading(isLoading) {
     if (isLoading) {
-      quizOutput.textContent = "🎲 Generating quiz questions...";
+      quizOutput.innerHTML = "🎲 Generating quiz questions...";
     }
   }
 
   /* -----------------------------
-         SUMMARIZE / UPLOAD
+          SUMMARIZE / UPLOAD
   ------------------------------ */
   if (uploadForm) {
     uploadForm.addEventListener("submit", async (e) => {
@@ -77,17 +84,29 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (!res.ok) {
-          summaryOutput.textContent = data.error || "An error occurred.";
-          keywordsOutput.textContent = "";
+          summaryOutput.innerHTML = data.error || "An error occurred.";
+          keywordsOutput.innerHTML = "";
           return;
         }
 
-        summaryOutput.textContent = data.summary || "No summary returned.";
-        keywordsOutput.textContent = data.keywords || "No keywords returned.";
+        // ---- FIXED SUMMARY RENDERING ----
+        const summary = data.summary || "No summary returned.";
+        summaryOutput.innerHTML = summary.replace(/\n/g, "<br>");
+
+        // ---- FIXED KEYWORDS RENDERING ----
+        const kws = data.keywords;
+        if (Array.isArray(kws)) {
+          keywordsOutput.innerHTML = kws.join(", ");
+        } else if (typeof kws === "string") {
+          keywordsOutput.innerHTML = kws;
+        } else {
+          keywordsOutput.innerHTML = "No keywords returned.";
+        }
+
       } catch (err) {
         console.error(err);
-        summaryOutput.textContent = "Error connecting to server.";
-        keywordsOutput.textContent = "";
+        summaryOutput.innerHTML = "Error connecting to server.";
+        keywordsOutput.innerHTML = "";
       } finally {
         summarizeBtn.disabled = false;
       }
@@ -95,11 +114,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* -----------------------------
-              QUIZ
+                QUIZ
   ------------------------------ */
   if (quizBtn) {
     quizBtn.addEventListener("click", async () => {
-      const summaryText = (summaryOutput.textContent || "").trim();
+      const summaryText = (summaryOutput.innerText || "").trim();
       if (!summaryText) {
         alert("Please summarize some text first.");
         return;
@@ -120,14 +139,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (!res.ok) {
-          quizOutput.textContent = data.error || "Quiz generation failed.";
+          quizOutput.innerHTML = data.error || "Quiz generation failed.";
           return;
         }
 
-        quizOutput.textContent = data.quiz || "No quiz returned.";
+        const quizText = data.quiz || "No quiz returned.";
+        // keep line breaks for questions / answers
+        quizOutput.innerHTML = quizText.replace(/\n/g, "<br>");
       } catch (err) {
         console.error(err);
-        quizOutput.textContent = "Error connecting to server.";
+        quizOutput.innerHTML = "Error connecting to server.";
       } finally {
         setQuizLoading(false);
       }
@@ -140,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentUtterance = null;
 
   function speakSummary() {
-    const text = (summaryOutput.textContent || "").trim();
+    const text = (summaryOutput.innerText || "").trim();
     if (!text) {
       alert("No summary to speak.");
       return;
@@ -178,14 +199,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (stopBtn) stopBtn.addEventListener("click", stopSpeech);
 
   /* -----------------------------
-           READER VIEW
+            READER VIEW
   ------------------------------ */
   if (readerViewBtn) {
     readerViewBtn.addEventListener("click", () => {
-      const summaryText = (summaryOutput.textContent || "").trim();
-      const keywordsText = (keywordsOutput.textContent || "").trim();
+      const summaryText = (summaryOutput.innerHTML || "").trim();
+      const keywordsText = (keywordsOutput.innerText || "").trim();
 
-      // Simple way: put in localStorage and open reader-view
+      // Save to localStorage for reader_view.html
       try {
         localStorage.setItem("learnova_summary", summaryText);
         localStorage.setItem("learnova_keywords", keywordsText);
@@ -359,8 +380,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (exportBtn) {
     exportBtn.addEventListener("click", () => {
-      const summaryText = (summaryOutput.textContent || "").trim();
-      const quizText = (quizOutput.textContent || "").trim();
+      const summaryText = (summaryOutput.innerText || "").trim();
+      const quizText = (quizOutput.innerText || "").trim();
 
       if (!summaryText && !quizText) {
         alert("No summary or quiz available to export.");
